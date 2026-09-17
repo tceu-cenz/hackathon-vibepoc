@@ -1,0 +1,974 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>Toyota Connected - MPG Cognitive Translator</title>
+  <!-- Tailwind CSS CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <!-- Chart.js for data visualization -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <!-- Google Fonts: Inter & Outfit for refined automotive styling -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=Outfit:wght@400;500;600;700&display=swap" rel="stylesheet">
+
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          fontFamily: {
+            sans: ['Inter', 'sans-serif'],
+            display: ['Outfit', 'sans-serif'],
+          },
+          colors: {
+            toyota: {
+              red: '#EB0A1E',
+              dark: '#111827',
+              gray: '#6B7280',
+              lightGray: '#F3F4F6',
+              cardBg: '#FFFFFF',
+              ecoGreen: '#22C55E',
+              ecoDarkGreen: '#15803D',
+              ecoSoft: '#DCFCE7',
+              electricBlue: '#2563EB',
+              electricSoft: '#DBEAFE',
+              lavenderBar: '#C7D2FE',
+            }
+          },
+          boxShadow: {
+            'soft': '0 4px 20px -2px rgba(0, 0, 0, 0.05)',
+            'float': '0 10px 25px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05)',
+          }
+        }
+      }
+    }
+  </script>
+
+  <style>
+    /* Smooth custom scrollbars */
+    ::-webkit-scrollbar {
+      width: 4px;
+      height: 4px;
+    }
+    ::-webkit-scrollbar-track {
+      background: transparent;
+    }
+    ::-webkit-scrollbar-thumb {
+      background: #D1D5DB;
+      border-radius: 4px;
+    }
+    .tap-highlight-transparent {
+      -webkit-tap-highlight-color: transparent;
+    }
+    /* Animated pulse badge */
+    @keyframes softPulse {
+      0%, 100% { transform: scale(1); opacity: 1; }
+      50% { transform: scale(1.04); opacity: 0.92; }
+    }
+    .animate-soft-pulse {
+      animation: softPulse 3s ease-in-out infinite;
+    }
+    /* DIKW Highlight glow effect */
+    .dikw-active-glow {
+      box-shadow: 0 0 0 2px #22C55E, 0 10px 25px -5px rgba(34, 197, 94, 0.25);
+      transition: all 0.3s ease;
+    }
+  </style>
+</head>
+<body class="bg-neutral-900 text-slate-800 font-sans antialiased min-h-screen flex flex-col items-center justify-start p-0 sm:p-4 md:p-8">
+
+  <!-- Main Device Shell (Simulating mobile app experience + responsive expandability) -->
+  <div class="w-full max-w-md bg-[#FAFAFA] min-h-screen sm:min-h-[920px] sm:rounded-[44px] shadow-2xl overflow-hidden flex flex-col border border-neutral-700/30 relative select-none">
+
+    <!-- Top Status Bar (Matches screenshot: 11:01, icons, battery) -->
+    <header class="w-full pt-3 px-7 pb-2 flex justify-between items-center bg-[#FAFAFA] z-30 sticky top-0">
+      <div class="flex items-center space-x-1">
+        <span class="text-[15px] font-bold tracking-tight text-neutral-900 font-sans">11:01</span>
+        <svg class="w-3.5 h-3.5 text-neutral-900 fill-current ml-0.5" viewBox="0 0 24 24">
+          <path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z"/>
+        </svg>
+      </div>
+
+      <!-- Dynamic Island / Sensor Pill -->
+      <div class="w-24 h-4 bg-neutral-900 rounded-full hidden sm:block"></div>
+
+      <div class="flex items-center space-x-2 text-neutral-900">
+        <!-- Signal strength -->
+        <svg class="w-4 h-3 fill-current" viewBox="0 0 20 14">
+          <rect x="1" y="10" width="3" height="4" rx="0.5"/>
+          <rect x="6" y="7" width="3" height="7" rx="0.5"/>
+          <rect x="11" y="4" width="3" height="10" rx="0.5"/>
+          <rect x="16" y="1" width="3" height="13" rx="0.5"/>
+        </svg>
+        <!-- Wifi icon -->
+        <svg class="w-4 h-3.5 fill-current" viewBox="0 0 24 24">
+          <path d="M12 4C7.31 4 3.07 5.9 0 8.98L12 21 24 8.98C20.93 5.9 16.69 4 12 4zm0 3.5c3.67 0 7 1.44 9.48 3.79L12 19.33 2.52 11.29C5 8.94 8.33 7.5 12 7.5z"/>
+        </svg>
+        <!-- Battery with charging bolt -->
+        <div class="flex items-center">
+          <div class="w-6 h-3.5 border-[1.5px] border-neutral-900 rounded-sm p-0.5 flex items-center relative">
+            <div class="h-full bg-emerald-500 rounded-xs w-full flex items-center justify-center">
+              <svg class="w-2.5 h-2.5 text-white fill-current" viewBox="0 0 24 24">
+                <path d="M11 21h-1l1-7H7.5c-.58 0-.57-.32-.38-.66.19-.34.05-.08.07-.12C8.48 10.94 10.42 7.54 13 3h1l-1 7h3.5c.49 0 .56.33.47.51l-.07.15-5.9 10.34z"/>
+              </svg>
+            </div>
+            <div class="w-0.5 h-1.5 bg-neutral-900 absolute -right-1 rounded-r-xs"></div>
+          </div>
+        </div>
+      </div>
+    </header>
+
+    <!-- App Navigation Header (Matching screenshot style with back button, screen title & share) -->
+    <nav class="px-5 py-2.5 flex items-center justify-between border-b border-neutral-200/70 bg-[#FAFAFA] sticky top-8 z-20">
+      <button id="btnBack" class="p-1 -ml-1 text-neutral-900 hover:opacity-70 transition active:scale-95" aria-label="Go Back">
+        <svg class="w-6 h-6 stroke-[2.5] stroke-current fill-none" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" d="M15.75 19.5L8.25 12l7.5-7.5" />
+        </svg>
+      </button>
+
+      <div class="text-center">
+        <h1 class="text-[17px] font-bold text-neutral-900 tracking-tight font-display">Hybrid Coaching</h1>
+        <p class="text-[10px] text-neutral-400 font-medium tracking-wide">THU, 17 SEP 2026</p>
+      </div>
+
+      <!-- Theory Lens & DIKW Inspector Trigger Button -->
+      <button id="btnOpenTheory" class="flex items-center space-x-1 bg-neutral-900 text-white text-[11px] font-semibold py-1 px-2.5 rounded-full hover:bg-neutral-800 transition shadow-sm active:scale-95" title="View Hackathon Science Architecture">
+        <span class="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
+        <span>DIKW Lens</span>
+      </button>
+    </nav>
+
+    <!-- App Content Scrollable Container -->
+    <main class="flex-1 overflow-y-auto px-5 pt-3 pb-24 space-y-5" id="scrollContainer">
+
+      <!-- Hackathon Context Banner (Collapsible) -->
+      <div id="hackathonBanner" class="bg-gradient-to-r from-red-600 via-rose-600 to-neutral-900 text-white p-3.5 rounded-2xl shadow-sm text-xs relative overflow-hidden transition-all duration-300">
+        <div class="absolute -right-6 -bottom-6 w-24 h-24 bg-white/10 rounded-full blur-xl pointer-events-none"></div>
+        <div class="flex items-start justify-between">
+          <div class="space-y-1 pr-6">
+            <div class="flex items-center space-x-1.5">
+              <span class="bg-white/20 text-[10px] font-bold px-2 py-0.5 rounded-full uppercase tracking-wider">Hackathon PoC</span>
+              <span class="text-[11px] font-semibold text-rose-200">Owner: @Tsz Ho Wong</span>
+            </div>
+            <p class="font-medium text-white/95 leading-relaxed text-[11px]">
+              <span class="font-bold">Gulf of Evaluation Solved:</span> Raw <span class="underline decoration-emerald-400 font-semibold">58.2 MPG</span> translated into £ saved, peer rankings, and micro-habits.
+            </p>
+          </div>
+          <button onclick="document.getElementById('hackathonBanner').style.display='none'" class="text-white/60 hover:text-white text-base leading-none p-1">✕</button>
+        </div>
+      </div>
+
+      <!-- DIKW Interactive Stage Tracker: Lets users experience the cognitive transformation -->
+      <div class="bg-white rounded-2xl p-3 border border-neutral-200 shadow-soft">
+        <div class="flex items-center justify-between mb-2">
+          <span class="text-[11px] font-bold uppercase tracking-wider text-neutral-400">Cognitive Translation Path</span>
+          <span class="text-[10px] font-semibold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-full border border-emerald-200">Norman's Bridge</span>
+        </div>
+
+        <div class="grid grid-cols-4 gap-1.5 text-center text-xs">
+          <!-- Data Step -->
+          <button onclick="highlightDIKW('data')" id="step-data" class="dikw-btn py-1.5 px-1 rounded-xl border border-neutral-200 bg-neutral-50 hover:bg-neutral-100 transition group text-left flex flex-col justify-between">
+            <span class="text-[9px] font-bold text-neutral-400 group-hover:text-neutral-700 uppercase">1. Data</span>
+            <span class="text-[11px] font-bold text-neutral-800">58.2 MPG</span>
+          </button>
+          <!-- Info Step -->
+          <button onclick="highlightDIKW('info')" id="step-info" class="dikw-btn py-1.5 px-1 rounded-xl border border-emerald-200 bg-emerald-50/50 hover:bg-emerald-100 transition group text-left flex flex-col justify-between">
+            <span class="text-[9px] font-bold text-emerald-600 uppercase">2. Info</span>
+            <span class="text-[11px] font-bold text-emerald-900">Top 8%</span>
+          </button>
+          <!-- Knowledge Step -->
+          <button onclick="highlightDIKW('knowledge')" id="step-knowledge" class="dikw-btn py-1.5 px-1 rounded-xl border border-blue-200 bg-blue-50/50 hover:bg-blue-100 transition group text-left flex flex-col justify-between">
+            <span class="text-[9px] font-bold text-blue-600 uppercase">3. Know</span>
+            <span class="text-[11px] font-bold text-blue-900">£48.20 Saved</span>
+          </button>
+          <!-- Wisdom Step -->
+          <button onclick="highlightDIKW('wisdom')" id="step-wisdom" class="dikw-btn py-1.5 px-1 rounded-xl border border-purple-200 bg-purple-50/50 hover:bg-purple-100 transition group text-left flex flex-col justify-between">
+            <span class="text-[9px] font-bold text-purple-600 uppercase">4. Wisdom</span>
+            <span class="text-[11px] font-bold text-purple-900">Pulse Coast</span>
+          </button>
+        </div>
+      </div>
+
+      <!-- Hero MPG Translator Card (Data & Information Phase) -->
+      <section id="section-data" class="bg-white rounded-3xl p-5 border border-neutral-200 shadow-soft relative overflow-hidden transition-all duration-300">
+        <!-- Subtle Toyota Hybrid Flow Background graphic -->
+        <div class="absolute -right-10 -top-10 w-36 h-36 bg-emerald-50 rounded-full blur-2xl pointer-events-none"></div>
+
+        <div class="flex items-start justify-between relative z-10">
+          <div>
+            <div class="flex items-center space-x-2 mb-1">
+              <span class="w-2 h-2 rounded-full bg-emerald-500"></span>
+              <span class="text-xs font-semibold uppercase tracking-wider text-neutral-400 font-sans">Fuel Economy Insight</span>
+            </div>
+            <!-- The Raw Data transformed into Meaning -->
+            <div class="flex items-baseline space-x-2">
+              <span class="text-4xl font-extrabold tracking-tight text-neutral-900 font-display">58.2</span>
+              <span class="text-lg font-bold text-neutral-400">mpg</span>
+              <span class="ml-2 inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-bold bg-emerald-100 text-emerald-800 border border-emerald-200">
+                +14.2 vs ICE
+              </span>
+            </div>
+          </div>
+
+          <!-- Overall Performance Circle Score (Matching 85 score badge from screenshot) -->
+          <div class="flex flex-col items-center">
+            <div class="relative w-14 h-14 flex items-center justify-center">
+              <svg class="w-full h-full transform -rotate-90" viewBox="0 0 36 36">
+                <path class="text-neutral-100" stroke-width="3.2" stroke="currentColor" fill="none" d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" />
+                <path class="text-emerald-500 transition-all duration-1000 ease-out" stroke-dasharray="85, 100" stroke-width="3.2" stroke-linecap="round" stroke="currentColor" fill="none" d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" />
+              </svg>
+              <span class="absolute text-sm font-bold text-neutral-900 font-display">85</span>
+            </div>
+            <span class="text-[10px] font-semibold text-neutral-400 mt-1 uppercase tracking-wider">Score</span>
+          </div>
+        </div>
+
+        <!-- Social Comparison Anchor: Festinger's Social Comparison Theory -->
+        <div id="section-info" class="mt-4 pt-3.5 border-t border-neutral-100 flex items-center justify-between">
+          <div class="flex items-center space-x-2.5">
+            <div class="w-8 h-8 rounded-full bg-amber-50 border border-amber-200 flex items-center justify-center text-amber-600 font-bold text-sm">
+              🏆
+            </div>
+            <div>
+              <p class="text-xs font-bold text-neutral-800">Top 8% Most Efficient Drivers</p>
+              <p class="text-[11px] text-neutral-400">Benchmark: Toyota Yaris Cross Hybrid (UK)</p>
+            </div>
+          </div>
+          <button onclick="switchTab('benchmarks')" class="text-xs font-bold text-emerald-600 hover:text-emerald-700 flex items-center space-x-0.5">
+            <span>Rank #142</span>
+            <svg class="w-3.5 h-3.5 stroke-[2.5]" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M8.25 4.5l7.5 7.5-7.5 7.5"/></svg>
+          </button>
+        </div>
+      </section>
+
+      <!-- Self-Determination Theory & Tangible Cost/Carbon Savings (Knowledge Phase) -->
+      <section id="section-knowledge" class="space-y-2.5">
+        <div class="flex items-center justify-between px-1">
+          <h2 class="text-sm font-bold text-neutral-900 font-display tracking-tight flex items-center space-x-1.5">
+            <span>What Your 58.2 MPG Achieved</span>
+            <span class="text-[10px] font-medium text-neutral-400">(This Month)</span>
+          </h2>
+          <span class="text-[11px] font-semibold text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded-full">Real-World Value</span>
+        </div>
+
+        <div class="grid grid-cols-2 gap-3">
+          <!-- Cost Savings Card (Autonomy & Competence fulfillment) -->
+          <div class="bg-white rounded-2xl p-3.5 border border-neutral-200 shadow-soft relative overflow-hidden">
+            <div class="flex items-center justify-between mb-2">
+              <div class="w-7 h-7 rounded-xl bg-emerald-50 text-emerald-600 flex items-center justify-center">
+                <svg class="w-4 h-4 fill-none stroke-current stroke-2" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" d="M12 6v12m-3-2.818l.879.659c1.171.879 3.07.879 4.242 0 1.172-.879 1.172-2.303 0-3.182C13.536 12.219 12.768 12 12 12c-.725 0-1.45-.22-2.003-.659-1.106-.879-1.106-2.303 0-3.182s2.9-.879 4.006 0l.415.33M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+              </div>
+              <span class="text-[10px] font-bold text-emerald-700 bg-emerald-50 px-1.5 py-0.5 rounded">Wallet Gain</span>
+            </div>
+            <p class="text-2xl font-extrabold text-neutral-900 font-display">£48.20</p>
+            <p class="text-[11px] text-neutral-500 mt-0.5 font-medium">Saved vs standard petrol car</p>
+            <div class="mt-2.5 pt-2 border-t border-neutral-100 flex items-center justify-between text-[10px] text-neutral-400">
+              <span>Annualized run-rate:</span>
+              <span class="font-bold text-neutral-700">~£578/yr</span>
+            </div>
+          </div>
+
+          <!-- Carbon Reduction Card (Values & Sustainability Agency) -->
+          <div class="bg-white rounded-2xl p-3.5 border border-neutral-200 shadow-soft relative overflow-hidden">
+            <div class="flex items-center justify-between mb-2">
+              <div class="w-7 h-7 rounded-xl bg-teal-50 text-teal-600 flex items-center justify-center">
+                <svg class="w-4 h-4 fill-none stroke-current stroke-2" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" d="M20.25 7.5l-.625 10.632a2.25 2.25 0 01-2.247 2.118H6.622a2.25 2.25 0 01-2.247-2.118L3.75 7.5M10 11.25h4M3.375 7.5h17.25c.621 0 1.125-.504 1.125-1.125v-1.5c0-.621-.504-1.125-1.125-1.125H3.375c-.621 0-1.125.504-1.125 1.125v1.5c0 .621.504 1.125 1.125 1.125z" />
+                </svg>
+              </div>
+              <span class="text-[10px] font-bold text-teal-700 bg-teal-50 px-1.5 py-0.5 rounded">CO₂ Offset</span>
+            </div>
+            <p class="text-2xl font-extrabold text-neutral-900 font-display">38.4 <span class="text-xs font-semibold text-neutral-400">kg</span></p>
+            <p class="text-[11px] text-neutral-500 mt-0.5 font-medium">Emissions avoided</p>
+            <div class="mt-2.5 pt-2 border-t border-neutral-100 flex items-center justify-between text-[10px] text-neutral-400">
+              <span>Equiv. trees saved:</span>
+              <span class="font-bold text-neutral-700">🌲 1.8 Trees</span>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- Peer Benchmarking & Model Distribution (Social Comparison Theory) -->
+      <section class="bg-white rounded-3xl p-4 border border-neutral-200 shadow-soft">
+        <div class="flex items-center justify-between mb-3">
+          <div>
+            <h3 class="text-sm font-bold text-neutral-900 font-display">Peer Distribution</h3>
+            <p class="text-[11px] text-neutral-400">Where you stand against other hybrid drivers</p>
+          </div>
+          <!-- Vehicle Selector Filter -->
+          <select id="peerGroupSelect" onchange="updatePeerComparison()" class="text-[11px] font-semibold bg-neutral-50 border border-neutral-200 rounded-lg px-2 py-1 text-neutral-700 focus:outline-none focus:ring-1 focus:ring-emerald-500">
+            <option value="yaris">Yaris Cross (My Car)</option>
+            <option value="corolla">Corolla Hybrid</option>
+            <option value="rav4">RAV4 Hybrid</option>
+            <option value="allToyota">All Toyota Hybrids</option>
+          </select>
+        </div>
+
+        <!-- Custom Percentile Bar Graphic -->
+        <div class="space-y-2 pt-1">
+          <div class="relative pt-6 pb-2">
+            <!-- User Marker Tooltip Pin -->
+            <div id="userPin" class="absolute -top-1 left-[82%] -translate-x-1/2 flex flex-col items-center transition-all duration-500">
+              <span class="bg-neutral-900 text-white text-[10px] font-extrabold px-1.5 py-0.5 rounded shadow whitespace-nowrap">You: 58.2 MPG</span>
+              <div class="w-1.5 h-1.5 bg-neutral-900 rotate-45 -mt-0.5"></div>
+            </div>
+
+            <!-- Gradient Track -->
+            <div class="w-full h-3 rounded-full bg-gradient-to-r from-amber-400 via-emerald-400 to-emerald-600 relative overflow-hidden">
+              <!-- Grid line markers -->
+              <div class="absolute inset-0 flex justify-between px-2">
+                <span class="w-0.5 h-full bg-white/40"></span>
+                <span class="w-0.5 h-full bg-white/40"></span>
+                <span class="w-0.5 h-full bg-white/40"></span>
+              </div>
+            </div>
+
+            <!-- Labels underneath -->
+            <div class="flex justify-between items-center text-[10px] text-neutral-400 mt-1.5">
+              <span>Low (38 mpg)</span>
+              <span id="medianMpgLabel" class="font-semibold text-neutral-600">Cohort Avg: 51.4 mpg</span>
+              <span class="text-emerald-700 font-bold">Top 5% (63+ mpg)</span>
+            </div>
+          </div>
+
+          <!-- Comparison Metrics Table -->
+          <div class="bg-neutral-50 rounded-xl p-2.5 text-xs space-y-2 mt-2">
+            <div class="flex justify-between items-center text-[11px]">
+              <span class="text-neutral-500 flex items-center space-x-1">
+                <span class="w-2 h-2 rounded-full bg-neutral-300"></span>
+                <span>Typical Petrol Hatchback</span>
+              </span>
+              <span class="font-bold text-neutral-700">36.8 mpg <span class="text-rose-500 text-[10px]">(-36%)</span></span>
+            </div>
+            <div class="flex justify-between items-center text-[11px]">
+              <span class="text-neutral-500 flex items-center space-x-1">
+                <span class="w-2 h-2 rounded-full bg-blue-400"></span>
+                <span>Same Model Average</span>
+              </span>
+              <span class="font-bold text-neutral-700">51.4 mpg <span class="text-emerald-600 text-[10px]">(+13.2% you)</span></span>
+            </div>
+            <div class="flex justify-between items-center text-[11px]">
+              <span class="text-neutral-900 font-semibold flex items-center space-x-1">
+                <span class="w-2 h-2 rounded-full bg-emerald-500"></span>
+                <span>Your Efficiency</span>
+              </span>
+              <span class="font-extrabold text-emerald-700">58.2 mpg <span class="bg-emerald-100 text-emerald-800 text-[9px] px-1 py-0.2 rounded font-bold">92nd %ile</span></span>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- Original App Summary Data Contextualized (Trip & EV Summary from Screenshot 2) -->
+      <section class="bg-white rounded-3xl p-5 border border-neutral-200 shadow-soft space-y-4">
+        <div class="flex items-center justify-between border-b border-neutral-100 pb-2.5">
+          <div>
+            <h3 class="text-base font-semibold text-neutral-900 tracking-tight font-display">Trip & EV Dynamics</h3>
+            <p class="text-[11px] text-neutral-400">Connected telematics captured from vehicle CAN bus</p>
+          </div>
+          <span class="text-[10px] bg-neutral-100 text-neutral-600 font-semibold px-2 py-0.5 rounded-full">September Cycle</span>
+        </div>
+
+        <!-- Metric rows with screenshot icons -->
+        <div class="space-y-3.5 divide-y divide-neutral-100 text-xs">
+          <!-- Time Driven -->
+          <div class="flex items-center justify-between pt-1">
+            <div class="flex items-center space-x-3">
+              <div class="w-8 h-8 rounded-full bg-neutral-100 flex items-center justify-center text-neutral-700">
+                <svg class="w-4 h-4 fill-none stroke-current stroke-2" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><polyline points="12 6 12 12 16 14"/></svg>
+              </div>
+              <span class="text-neutral-500 font-medium">Time Driven</span>
+            </div>
+            <span class="text-sm font-bold text-neutral-900">23h 54m</span>
+          </div>
+
+          <!-- Distance Driven -->
+          <div class="flex items-center justify-between pt-3">
+            <div class="flex items-center space-x-3">
+              <div class="w-8 h-8 rounded-full bg-neutral-100 flex items-center justify-center text-neutral-700">
+                <svg class="w-4 h-4 fill-none stroke-current stroke-2" viewBox="0 0 24 24"><path d="M4 19a2 2 0 104 0v-4a2 2 0 10-4 0v4zm12-10a2 2 0 104 0V5a2 2 0 10-4 0v4z"/><path d="M8 17h8a2 2 0 002-2V7"/></svg>
+              </div>
+              <span class="text-neutral-500 font-medium">Distance Driven</span>
+            </div>
+            <span class="text-sm font-bold text-neutral-900">490.1 mi</span>
+          </div>
+
+          <!-- EV Usage Ratio (Key Toyota Hybrid Hero Metric) -->
+          <div class="flex items-center justify-between pt-3">
+            <div class="flex items-center space-x-3">
+              <div class="w-8 h-8 rounded-full bg-emerald-50 text-emerald-600 flex items-center justify-center">
+                <svg class="w-4 h-4 fill-none stroke-current stroke-2" viewBox="0 0 24 24"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>
+              </div>
+              <div>
+                <span class="text-neutral-900 font-semibold block">EV Mode Glide Ratio</span>
+                <span class="text-[10px] text-emerald-600 font-medium">Zero fuel burned for 181.1 miles</span>
+              </div>
+            </div>
+            <div class="text-right">
+              <span class="text-base font-extrabold text-emerald-600 font-display">37%</span>
+              <span class="text-[10px] text-neutral-400 block">15h 27m in EV</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Driving Behavioral Scores (Acceleration, Braking, Constant Speed from Screenshot 1) -->
+        <div class="pt-2">
+          <div class="flex justify-between items-center mb-2">
+            <span class="text-xs font-bold text-neutral-800">Behavioral Sub-Scores</span>
+            <span class="text-[10px] text-neutral-400">Influences your 58.2 MPG</span>
+          </div>
+
+          <div class="space-y-2.5">
+            <!-- Acceleration -->
+            <div>
+              <div class="flex justify-between text-xs mb-1">
+                <span class="text-neutral-700 font-medium">Acceleration</span>
+                <span class="font-bold text-neutral-900">81</span>
+              </div>
+              <div class="w-full bg-[#C7D2FE]/40 h-2 rounded-full overflow-hidden">
+                <div class="bg-emerald-500 h-full rounded-full" style="width: 81%"></div>
+              </div>
+            </div>
+
+            <!-- Braking (Regenerative capture) -->
+            <div>
+              <div class="flex justify-between text-xs mb-1">
+                <span class="text-neutral-700 font-medium">Regenerative Braking</span>
+                <span class="font-bold text-neutral-900">88</span>
+              </div>
+              <div class="w-full bg-[#C7D2FE]/40 h-2 rounded-full overflow-hidden">
+                <div class="bg-emerald-500 h-full rounded-full" style="width: 88%"></div>
+              </div>
+            </div>
+
+            <!-- Constant Speed -->
+            <div>
+              <div class="flex justify-between text-xs mb-1">
+                <span class="text-neutral-700 font-medium">Constant Speed (Throttle Control)</span>
+                <span class="font-bold text-neutral-900">82</span>
+              </div>
+              <div class="w-full bg-[#C7D2FE]/40 h-2 rounded-full overflow-hidden">
+                <div class="bg-emerald-500 h-full rounded-full" style="width: 82%"></div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- Actionable Wisdom: Fogg Behavior Model (Prompt + Ability + Motivation) -->
+      <section id="section-wisdom" class="space-y-3">
+        <div class="flex items-center justify-between px-1">
+          <div>
+            <h3 class="text-sm font-bold text-neutral-900 font-display">Behavioral Coaching (Wisdom)</h3>
+            <p class="text-[11px] text-neutral-400">Micro-adjustments for your next drive</p>
+          </div>
+          <span class="text-[10px] font-bold text-purple-700 bg-purple-50 px-2 py-0.5 rounded-full border border-purple-200">Fogg B=MAP</span>
+        </div>
+
+        <!-- Habit Card 1: Pulse & Glide -->
+        <div class="bg-white rounded-2xl p-4 border border-neutral-200 shadow-soft relative hover:border-emerald-300 transition">
+          <div class="flex items-start justify-between">
+            <div class="flex items-center space-x-2">
+              <span class="w-6 h-6 rounded-lg bg-emerald-100 text-emerald-700 text-xs font-bold flex items-center justify-center">1</span>
+              <h4 class="text-xs font-bold text-neutral-900">Master the "Pulse & Glide"</h4>
+            </div>
+            <span class="text-[10px] font-bold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-full">+3.5 MPG Potential</span>
+          </div>
+
+          <p class="text-[11px] text-neutral-600 mt-2 leading-relaxed">
+            <strong class="text-neutral-800">Prompt:</strong> Approaching roundabouts on the A40 towards High Wycombe.
+            <br>
+            <strong class="text-neutral-800">Easy Action (Ability):</strong> Release accelerator 200m earlier to trigger regenerative battery recharge without harsh braking.
+          </p>
+
+          <div class="mt-3 pt-2.5 border-t border-neutral-100 flex items-center justify-between">
+            <span class="text-[10px] text-neutral-400 flex items-center space-x-1">
+              <span>Difficulty:</span>
+              <span class="text-emerald-600 font-semibold">Easy (Low Friction)</span>
+            </span>
+            <button onclick="toggleHabitCommit(this)" class="text-[11px] font-bold text-neutral-700 bg-neutral-100 hover:bg-neutral-200 px-3 py-1 rounded-full transition active:scale-95">
+              + Try on Next Trip
+            </button>
+          </div>
+        </div>
+
+        <!-- Habit Card 2: Climate Pre-Conditioning -->
+        <div class="bg-white rounded-2xl p-4 border border-neutral-200 shadow-soft relative hover:border-blue-300 transition">
+          <div class="flex items-start justify-between">
+            <div class="flex items-center space-x-2">
+              <span class="w-6 h-6 rounded-lg bg-blue-100 text-blue-700 text-xs font-bold flex items-center justify-center">2</span>
+              <h4 class="text-xs font-bold text-neutral-900">Cabin Pre-Cooling in MyToyota</h4>
+            </div>
+            <span class="text-[10px] font-bold text-blue-700 bg-blue-50 px-2 py-0.5 rounded-full">+1.8 MPG Potential</span>
+          </div>
+
+          <p class="text-[11px] text-neutral-600 mt-2 leading-relaxed">
+            <strong class="text-neutral-800">Prompt:</strong> 10 mins before departing Churchill Place, Harrow.
+            <br>
+            <strong class="text-neutral-800">Easy Action:</strong> Pre-condition cabin temperature while parked to conserve hybrid traction battery for driving.
+          </p>
+
+          <div class="mt-3 pt-2.5 border-t border-neutral-100 flex items-center justify-between">
+            <span class="text-[10px] text-neutral-400 flex items-center space-x-1">
+              <span>Difficulty:</span>
+              <span class="text-blue-600 font-semibold">1-Tap in App</span>
+            </span>
+            <button onclick="toggleHabitCommit(this)" class="text-[11px] font-bold text-neutral-700 bg-neutral-100 hover:bg-neutral-200 px-3 py-1 rounded-full transition active:scale-95">
+              + Try on Next Trip
+            </button>
+          </div>
+        </div>
+      </section>
+
+      <!-- Interactive "What If" Savings Simulator (Empowering User Agency) -->
+      <section class="bg-gradient-to-br from-neutral-900 via-neutral-800 to-neutral-900 text-white rounded-3xl p-5 shadow-float relative overflow-hidden">
+        <div class="absolute -right-12 -bottom-12 w-32 h-32 bg-emerald-500/10 rounded-full blur-2xl"></div>
+
+        <div class="flex items-center justify-between mb-3">
+          <div>
+            <span class="text-[10px] font-bold tracking-wider text-emerald-400 uppercase">Interactive Simulator</span>
+            <h4 class="text-base font-bold font-display">Target Your Next MPG Goal</h4>
+          </div>
+          <div class="text-right">
+            <span id="targetMpgDisplay" class="text-2xl font-extrabold text-white font-display">62.0</span>
+            <span class="text-xs text-neutral-400">mpg</span>
+          </div>
+        </div>
+
+        <p class="text-xs text-neutral-300 leading-relaxed">
+          Slide to see how small driving adjustments translate into annual pound savings and reduced tailpipe carbon:
+        </p>
+
+        <!-- Interactive Range Slider -->
+        <div class="mt-4 space-y-2">
+          <input type="range" id="mpgSlider" min="50" max="70" step="0.5" value="62" oninput="calculateProjectedImpact()" class="w-full h-2 bg-neutral-700 rounded-lg appearance-none cursor-pointer accent-emerald-500">
+          <div class="flex justify-between text-[10px] text-neutral-400">
+            <span>50 mpg (Baseline)</span>
+            <span>Current: 58.2</span>
+            <span>70 mpg (Hypermiler)</span>
+          </div>
+        </div>
+
+        <!-- Calculated Real-Time Return -->
+        <div class="grid grid-cols-2 gap-2 mt-4 pt-4 border-t border-neutral-800 text-center">
+          <div class="bg-neutral-800/80 rounded-xl p-2.5 border border-neutral-700/50">
+            <span class="text-[10px] text-neutral-400 block font-medium">Extra Annual Savings</span>
+            <span id="projectedPoundSave" class="text-lg font-bold text-emerald-400 font-display">+£112.40/yr</span>
+          </div>
+          <div class="bg-neutral-800/80 rounded-xl p-2.5 border border-neutral-700/50">
+            <span class="text-[10px] text-neutral-400 block font-medium">Extra CO₂ Prevented</span>
+            <span id="projectedCo2Save" class="text-lg font-bold text-teal-300 font-display">+86.2 kg/yr</span>
+          </div>
+        </div>
+      </section>
+
+      <!-- Collective Sustainability (Self-Determination Theory: Relatedness) -->
+      <section class="bg-emerald-50 border border-emerald-200 rounded-3xl p-4.5 text-emerald-950 flex items-center space-x-3.5">
+        <div class="w-12 h-12 rounded-2xl bg-emerald-500 text-white flex items-center justify-center text-xl shrink-0 shadow-sm">
+          🌱
+        </div>
+        <div class="space-y-0.5">
+          <div class="flex items-center space-x-1.5">
+            <span class="text-xs font-bold text-emerald-900">Greater London Toyota Collective</span>
+            <span class="text-[9px] bg-emerald-200 text-emerald-800 font-bold px-1.5 rounded">Live Fleet</span>
+          </div>
+          <p class="text-[11px] text-emerald-800 leading-snug">
+            Together, 12,480 hybrid drivers in your region avoided <strong class="font-bold">142 tonnes of CO₂</strong> this week.
+          </p>
+        </div>
+      </section>
+
+      <!-- View Recent Trip Reference Button (Preserving Screenshot 1 navigation) -->
+      <div class="pt-1">
+        <button onclick="openTripModal()" class="w-full py-3 px-4 rounded-full border-2 border-neutral-900 bg-white hover:bg-neutral-50 text-neutral-900 font-bold text-sm transition active:scale-[0.98] shadow-sm flex items-center justify-center space-x-2">
+          <svg class="w-4 h-4 fill-none stroke-current stroke-2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M9 6.75V15m6-6v8.25m.503 3.498l4.875-2.437c.381-.19.622-.58.622-1.006V4.82c0-.836-.88-1.38-1.628-1.006l-3.869 1.934c-.317.159-.69.159-1.006 0L9.503 3.284a2.25 2.25 0 00-2.006 0L2.622 5.72A1.125 1.125 0 002 6.727v12.356c0 .836.88 1.38 1.628 1.006l3.869-1.934c.317-.159.69-.159 1.006 0l4.994 2.497c.317.158.69.158 1.006 0z"/></svg>
+          <span>View Trip: Harrow ➔ High Wycombe</span>
+        </button>
+      </div>
+
+    </main>
+
+    <!-- Bottom Tab Navigation (Faithful to modern MyToyota Connected app) -->
+    <nav class="bg-white border-t border-neutral-200/80 px-6 py-3 flex justify-between items-center z-20 shadow-lg">
+      <button class="flex flex-col items-center space-y-1 text-neutral-400 hover:text-neutral-900 transition">
+        <svg class="w-5 h-5 fill-none stroke-current stroke-2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M2.25 12l8.954-8.955c.44-.439 1.152-.439 1.591 0L21.75 12M4.5 9.75v10.125c0 .621.504 1.125 1.125 1.125H9.75v-4.875c0-.621.504-1.125 1.125-1.125h2.25c.621 0 1.125.504 1.125 1.125V21h4.125c.621 0 1.125-.504 1.125-1.125V9.75M8.25 21h8.25"/></svg>
+        <span class="text-[10px] font-semibold">Home</span>
+      </button>
+
+      <button class="flex flex-col items-center space-y-1 text-emerald-600 font-bold">
+        <div class="relative">
+          <svg class="w-5 h-5 fill-none stroke-current stroke-2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M3.75 13.5l10.5-11.25L12 10.5h8.25L9.75 21.75 12 13.5H3.75z"/></svg>
+          <span class="w-1.5 h-1.5 bg-emerald-500 rounded-full absolute -top-0.5 -right-0.5"></span>
+        </div>
+        <span class="text-[10px]">Coaching</span>
+      </button>
+
+      <button onclick="switchTab('benchmarks')" class="flex flex-col items-center space-y-1 text-neutral-400 hover:text-neutral-900 transition">
+        <svg class="w-5 h-5 fill-none stroke-current stroke-2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M3 13.125C3 12.504 3.504 12 4.125 12h2.25c.621 0 1.125.504 1.125 1.125v6.75C7.5 20.496 6.996 21 6.375 21h-2.25A1.125 1.125 0 013 19.875v-6.75zM9.75 8.625c0-.621.504-1.125 1.125-1.125h2.25c.621 0 1.125.504 1.125 1.125v11.25c0 .621-.504 1.125-1.125 1.125h-2.25a1.125 1.125 0 01-1.125-1.125V8.625zM16.5 4.125c0-.621.504-1.125 1.125-1.125h2.25C20.496 3 21 3.504 21 4.125v15.75c0 .621-.504 1.125-1.125 1.125h-2.25a1.125 1.125 0 01-1.125-1.125V4.125z"/></svg>
+        <span class="text-[10px] font-semibold">Rankings</span>
+      </button>
+
+      <button class="flex flex-col items-center space-y-1 text-neutral-400 hover:text-neutral-900 transition">
+        <svg class="w-5 h-5 fill-none stroke-current stroke-2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M10.5 6h9.75M10.5 6a1.5 1.5 0 11-3 0m3 0a1.5 1.5 0 10-3 0M3.75 6H7.5m3 12h9.75m-9.75 0a1.5 1.5 0 01-3 0m3 0a1.5 1.5 0 00-3 0m-3.75 0H7.5m9-6h3.75m-3.75 0a1.5 1.5 0 01-3 0m3 0a1.5 1.5 0 00-3 0m-9.75 0h9.75"/></svg>
+        <span class="text-[10px] font-semibold">Settings</span>
+      </button>
+    </nav>
+
+    <!-- Academic Rationale & Hackathon Theory Drawer (Norman's Gulf of Evaluation & DIKW) -->
+    <div id="theoryDrawer" class="fixed inset-0 z-50 bg-neutral-950/75 backdrop-blur-sm flex justify-end transition-opacity duration-300 opacity-0 pointer-events-none">
+      <div id="theoryPanel" class="w-full max-w-md bg-white h-full shadow-2xl overflow-y-auto transform translate-x-full transition-transform duration-300 flex flex-col">
+        <!-- Drawer Header -->
+        <div class="p-5 border-b border-neutral-200 bg-neutral-900 text-white flex items-center justify-between sticky top-0 z-10">
+          <div>
+            <span class="text-[10px] font-bold text-emerald-400 uppercase tracking-widest">Hackathon Theory Architecture</span>
+            <h3 class="text-base font-bold font-display">Behavioral Science & DIKW</h3>
+            <p class="text-[11px] text-neutral-400">Concept & Architecture by @Tsz Ho Wong</p>
+          </div>
+          <button onclick="closeTheoryModal()" class="w-8 h-8 rounded-full bg-neutral-800 text-white hover:bg-neutral-700 flex items-center justify-center font-bold">✕</button>
+        </div>
+
+        <!-- Drawer Body -->
+        <div class="p-5 space-y-5 text-neutral-800 text-xs leading-relaxed">
+
+          <!-- 1. The DIKW Pyramid Section -->
+          <div class="bg-neutral-50 rounded-2xl p-4 border border-neutral-200 space-y-2">
+            <div class="flex items-center space-x-2">
+              <span class="w-3 h-3 rounded-full bg-emerald-500"></span>
+              <h4 class="font-bold text-neutral-900 text-sm font-display">1. The DIKW Hierarchy</h4>
+            </div>
+            <p class="text-neutral-600">
+              Raw telemetry like <code class="bg-neutral-200 px-1 rounded text-neutral-900">58.2 MPG</code> sits at the base of Ackoff's DIKW pyramid without meaning.
+            </p>
+            <ul class="space-y-1.5 pl-2 border-l-2 border-emerald-400 text-[11px]">
+              <li><strong class="text-neutral-900">Data:</strong> 58.2 MPG captured over 490.1 miles.</li>
+              <li><strong class="text-emerald-700">Information:</strong> "+14.2 MPG vs class" & "Top 8% in Greater London".</li>
+              <li><strong class="text-blue-700">Knowledge:</strong> Saved £48.20 and avoided 38.4kg CO₂ this cycle.</li>
+              <li><strong class="text-purple-700">Wisdom:</strong> "Pulse & Glide" on the A40 roundabout descent.</li>
+            </ul>
+          </div>
+
+          <!-- 2. Don Norman's Gulf of Evaluation -->
+          <div class="bg-neutral-50 rounded-2xl p-4 border border-neutral-200 space-y-2">
+            <div class="flex items-center space-x-2">
+              <span class="w-3 h-3 rounded-full bg-blue-500"></span>
+              <h4 class="font-bold text-neutral-900 text-sm font-display">2. Don Norman's Gulf of Evaluation</h4>
+            </div>
+            <p class="text-neutral-600">
+              Drivers traditionally look at 58.2 MPG and face a high cognitive gulf: <em>"Is this good? Did I drive well? What should I do next?"</em>
+            </p>
+            <p class="text-neutral-600">
+              By pairing the MPG instantly with an intuitive percentile badge and monetary savings, the Gulf of Evaluation is closed in less than 500 milliseconds.
+            </p>
+          </div>
+
+          <!-- 3. Social Comparison Theory (Festinger) -->
+          <div class="bg-neutral-50 rounded-2xl p-4 border border-neutral-200 space-y-2">
+            <div class="flex items-center space-x-2">
+              <span class="w-3 h-3 rounded-full bg-amber-500"></span>
+              <h4 class="font-bold text-neutral-900 text-sm font-display">3. Social Comparison (Festinger)</h4>
+            </div>
+            <p class="text-neutral-600">
+              Humans evaluate their performance by comparing with relevant peers. Benchmarking against identical models (Toyota Yaris Cross) prevents false comparisons against full EVs or diesel lorries.
+            </p>
+          </div>
+
+          <!-- 4. Self-Determination Theory (SDT) -->
+          <div class="bg-neutral-50 rounded-2xl p-4 border border-neutral-200 space-y-2">
+            <div class="flex items-center space-x-2">
+              <span class="w-3 h-3 rounded-full bg-teal-500"></span>
+              <h4 class="font-bold text-neutral-900 text-sm font-display">4. Self-Determination Theory (Deci & Ryan)</h4>
+            </div>
+            <ul class="space-y-1 text-[11px] text-neutral-600">
+              <li>• <strong class="text-neutral-900">Autonomy:</strong> Interactive savings simulator lets users define their own target.</li>
+              <li>• <strong class="text-neutral-900">Competence:</strong> Progress bars, 85/100 score, and achievable badges.</li>
+              <li>• <strong class="text-neutral-900">Relatedness:</strong> Community total: "142 tonnes saved together in London".</li>
+            </ul>
+          </div>
+
+          <!-- 5. Fogg Behavior Model (B=MAP) -->
+          <div class="bg-neutral-50 rounded-2xl p-4 border border-neutral-200 space-y-2">
+            <div class="flex items-center space-x-2">
+              <span class="w-3 h-3 rounded-full bg-purple-500"></span>
+              <h4 class="font-bold text-neutral-900 text-sm font-display">5. Fogg Behavior Model (B = MAP)</h4>
+            </div>
+            <p class="text-neutral-600">
+              Instead of generic advice ("Drive better"), the app gives:
+            </p>
+            <div class="p-2 bg-purple-50 rounded-xl text-purple-900 text-[11px] font-medium border border-purple-200">
+              <strong>Motivation:</strong> £578/yr saved + CO₂ cuts.<br>
+              <strong>Ability:</strong> Tiny frictionless action (Lift off accelerator 200m before roundabout).<br>
+              <strong>Prompt:</strong> Geo-targeted context on your usual A40 route.
+            </div>
+          </div>
+
+          <button onclick="closeTheoryModal()" class="w-full py-3 bg-neutral-900 text-white rounded-xl font-bold hover:bg-neutral-800 transition">
+            Back to Interactive Experience
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Detailed Trip Modal (Simulating Screenshot 1: Harrow to High Wycombe) -->
+    <div id="tripModal" class="fixed inset-0 z-50 bg-neutral-950/70 backdrop-blur-xs flex items-end sm:items-center justify-center transition-opacity duration-300 opacity-0 pointer-events-none p-0 sm:p-4">
+      <div id="tripContent" class="w-full max-w-md bg-white rounded-t-[32px] sm:rounded-3xl shadow-2xl p-5 transform translate-y-full transition-transform duration-300 max-h-[90vh] overflow-y-auto">
+        <!-- Modal Top Bar -->
+        <div class="flex justify-between items-center pb-3 border-b border-neutral-100">
+          <div>
+            <span class="text-[10px] font-bold text-neutral-400 uppercase tracking-wide">Trip Archive</span>
+            <h3 class="text-base font-bold text-neutral-900 font-display">Thu, 17 Sep 2026</h3>
+          </div>
+          <button onclick="closeTripModal()" class="w-8 h-8 rounded-full bg-neutral-100 text-neutral-700 hover:bg-neutral-200 flex items-center justify-center font-bold">✕</button>
+        </div>
+
+        <!-- Simulated Stylized Map Container (Matches Screenshot 1) -->
+        <div class="mt-3 relative w-full h-36 bg-slate-100 rounded-2xl overflow-hidden border border-neutral-200 shadow-inner flex items-center justify-center">
+          <svg class="w-full h-full" viewBox="0 0 380 150" preserveAspectRatio="none">
+            <!-- Background land & rivers -->
+            <rect width="380" height="150" fill="#EBF3EB"/>
+            <path d="M-10,120 Q80,100 160,110 T390,90" fill="none" stroke="#D3E2F8" stroke-width="8"/>
+            <path d="M220,-10 Q240,70 260,160" fill="none" stroke="#CBD5E1" stroke-width="4"/>
+            <!-- Road M25 marker -->
+            <rect x="235" y="15" width="28" height="15" rx="3" fill="#60A5FA"/>
+            <text x="249" y="26" font-size="9" font-weight="bold" fill="#ffffff" text-anchor="middle">M25</text>
+            <text x="310" y="30" font-size="11" font-weight="bold" fill="#64748B">Watford</text>
+            <text x="180" y="140" font-size="11" font-weight="bold" fill="#64748B">Slough</text>
+            <text x="70" y="140" font-size="11" font-weight="bold" fill="#64748B">Maidenhead</text>
+
+            <!-- Driving Route Line (Black with blue EV regenerative segments) -->
+            <path d="M50,40 Q90,38 120,60 T200,90 T290,95 T340,40" fill="none" stroke="#111827" stroke-width="5" stroke-linecap="round"/>
+            <path d="M45,39 Q70,38 90,45" fill="none" stroke="#38BDF8" stroke-width="5" stroke-linecap="round"/>
+            <path d="M220,93 Q240,95 260,94" fill="none" stroke="#38BDF8" stroke-width="5" stroke-linecap="round"/>
+
+            <!-- Start & End Pins -->
+            <!-- High Wycombe (Red pin) -->
+            <circle cx="50" cy="40" r="6" fill="#EF4444" stroke="#ffffff" stroke-width="2"/>
+            <text x="50" y="28" font-size="9" font-weight="bold" fill="#1E293B" text-anchor="middle">High Wycombe</text>
+
+            <!-- Harrow (Target pin) -->
+            <circle cx="340" cy="40" r="7" fill="#ffffff" stroke="#EF4444" stroke-width="3"/>
+            <circle cx="340" cy="40" r="2.5" fill="#EF4444"/>
+          </svg>
+          <div class="absolute bottom-2 left-2 bg-white/90 backdrop-blur-xs px-2 py-0.5 rounded text-[9px] font-bold text-neutral-600 shadow-xs">
+            Trip MPG: 61.4 (Above Avg)
+          </div>
+        </div>
+
+        <!-- Start & Destination Points (Directly matching Screenshot 1 text) -->
+        <div class="mt-4 space-y-3 relative pl-6 text-xs">
+          <!-- Connecting dotted line -->
+          <div class="absolute left-2.5 top-3 bottom-3 w-1 bg-neutral-900 rounded-full"></div>
+
+          <!-- Origin -->
+          <div class="relative">
+            <div class="absolute -left-[19px] top-1 w-3.5 h-3.5 rounded-full border-2 border-neutral-900 bg-white"></div>
+            <p class="font-bold text-neutral-900 leading-snug">42 Churchill Place, Harrow, HA1 1XY, United Kingdom</p>
+            <p class="text-neutral-400 font-medium text-[11px] mt-0.5">07:24</p>
+          </div>
+
+          <!-- Destination -->
+          <div class="relative pt-1">
+            <div class="absolute -left-[19px] top-2 w-3.5 h-3.5 rounded-full bg-neutral-900"></div>
+            <p class="font-bold text-neutral-900 leading-snug">Halifax Road, High Wycombe, HP12 3SE, United Kingdom</p>
+            <p class="text-neutral-400 font-medium text-[11px] mt-0.5">08:31</p>
+          </div>
+        </div>
+
+        <!-- Trip Translation Summary -->
+        <div class="mt-4 bg-emerald-50 rounded-2xl p-3 border border-emerald-200 text-xs">
+          <div class="flex justify-between items-center mb-1">
+            <span class="font-bold text-emerald-900">Trip Efficiency Value</span>
+            <span class="font-extrabold text-emerald-700 font-display">61.4 MPG</span>
+          </div>
+          <p class="text-emerald-800 text-[11px]">
+            Saved <strong>£3.40</strong> in petrol and emitted <strong>2.8kg less CO₂</strong> compared to the average commuter on this route.
+          </p>
+        </div>
+
+        <button onclick="closeTripModal()" class="mt-4 w-full py-2.5 bg-neutral-900 text-white rounded-full font-bold text-xs hover:bg-neutral-800 transition">
+          Close Trip Details
+        </button>
+      </div>
+    </div>
+
+    <!-- Action Feedback Toast (Replacing disallowed alert popups) -->
+    <div id="toastMessage" class="fixed bottom-20 left-1/2 -translate-x-1/2 bg-neutral-900 text-white px-4 py-2 rounded-full text-xs font-semibold shadow-float opacity-0 pointer-events-none transition-all duration-300 z-50 flex items-center space-x-2">
+      <span class="w-2 h-2 rounded-full bg-emerald-400"></span>
+      <span id="toastText">Micro-habit added to trip checklist!</span>
+    </div>
+
+  </div>
+
+  <script>
+    // State management for Hackathon PoC
+    const appState = {
+      currentMpg: 58.2,
+      targetMpg: 62.0,
+      annualMiles: 9500,
+      fuelPricePerLiter: 1.48, // £1.48/liter UK avg
+      litersPerGallon: 4.54609, // UK imperial gallon
+      carModel: 'yaris',
+      cohortBenchmarks: {
+        yaris: { avg: 51.4, top10: 62.5, name: 'Toyota Yaris Cross Hybrid' },
+        corolla: { avg: 53.8, top10: 64.0, name: 'Toyota Corolla 1.8 Hybrid' },
+        rav4: { avg: 47.2, top10: 56.1, name: 'Toyota RAV4 Hybrid' },
+        allToyota: { avg: 50.8, top10: 61.8, name: 'Toyota UK Hybrid Fleet' }
+      }
+    };
+
+    // Calculate real-world financial & carbon outputs
+    function calculateProjectedImpact() {
+      const slider = document.getElementById('mpgSlider');
+      const targetMpg = parseFloat(slider.value);
+      document.getElementById('targetMpgDisplay').innerText = targetMpg.toFixed(1);
+
+      // Current fuel needed vs Target fuel needed for 9,500 annual miles
+      const currentGallons = appState.annualMiles / appState.currentMpg;
+      const targetGallons = appState.annualMiles / targetMpg;
+      const gallonsSaved = Math.max(0, currentGallons - targetGallons);
+
+      const litersSaved = gallonsSaved * appState.litersPerGallon;
+      const poundsSaved = litersSaved * appState.fuelPricePerLiter;
+      // 1 liter of E10 petrol = ~2.31 kg CO2
+      const co2SavedKg = litersSaved * 2.31;
+
+      // Update UI elements smoothly
+      document.getElementById('projectedPoundSave').innerText = `+£${poundsSaved.toFixed(2)}/yr`;
+      document.getElementById('projectedCo2Save').innerText = `+${co2SavedKg.toFixed(1)} kg/yr`;
+    }
+
+    // Dynamic Peer Group Benchmark selector
+    function updatePeerComparison() {
+      const select = document.getElementById('peerGroupSelect');
+      const selectedKey = select.value;
+      const benchmark = appState.cohortBenchmarks[selectedKey];
+
+      document.getElementById('medianMpgLabel').innerText = `Cohort Avg: ${benchmark.avg} mpg`;
+
+      // Recalculate percentile anchor pin position
+      // Range: 38mpg (0%) to 65mpg (100%)
+      const minScale = 38;
+      const maxScale = 66;
+      const percentage = Math.min(94, Math.max(10, ((appState.currentMpg - minScale) / (maxScale - minScale)) * 100));
+      
+      const pin = document.getElementById('userPin');
+      pin.style.left = `${percentage}%`;
+
+      showToast(`Switched cohort benchmark to: ${benchmark.name}`);
+    }
+
+    // DIKW Stage Highlight Interactive Guide
+    function highlightDIKW(stage) {
+      // Clear active styling
+      document.querySelectorAll('.dikw-btn').forEach(btn => btn.classList.remove('ring-2', 'ring-neutral-900', 'bg-white'));
+      
+      const btn = document.getElementById(`step-${stage}`);
+      if (btn) btn.classList.add('ring-2', 'ring-neutral-900', 'bg-white');
+
+      // Scroll to corresponding target section with highlight pulse
+      let targetId = '';
+      if (stage === 'data') targetId = 'section-data';
+      if (stage === 'info') targetId = 'section-info';
+      if (stage === 'knowledge') targetId = 'section-knowledge';
+      if (stage === 'wisdom') targetId = 'section-wisdom';
+
+      const el = document.getElementById(targetId);
+      if (el) {
+        el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        el.classList.add('dikw-active-glow');
+        setTimeout(() => {
+          el.classList.remove('dikw-active-glow');
+        }, 1800);
+      }
+    }
+
+    // Micro-habit commitment button (Fogg Behavior Model empowerment)
+    function toggleHabitCommit(button) {
+      const isCommitted = button.getAttribute('data-committed') === 'true';
+      if (!isCommitted) {
+        button.setAttribute('data-committed', 'true');
+        button.innerHTML = '✓ Habit Active';
+        button.className = 'text-[11px] font-bold text-white bg-emerald-600 px-3 py-1 rounded-full transition shadow-xs';
+        showToast('Habit enabled for your next commute to High Wycombe!');
+      } else {
+        button.setAttribute('data-committed', 'false');
+        button.innerHTML = '+ Try on Next Trip';
+        button.className = 'text-[11px] font-bold text-neutral-700 bg-neutral-100 hover:bg-neutral-200 px-3 py-1 rounded-full transition active:scale-95';
+        showToast('Habit removed from active checklist.');
+      }
+    }
+
+    // Modal and Drawer Controls
+    function openTripModal() {
+      const modal = document.getElementById('tripModal');
+      const content = document.getElementById('tripContent');
+      modal.classList.remove('opacity-0', 'pointer-events-none');
+      content.classList.remove('translate-y-full');
+    }
+
+    function closeTripModal() {
+      const modal = document.getElementById('tripModal');
+      const content = document.getElementById('tripContent');
+      content.classList.add('translate-y-full');
+      modal.classList.add('opacity-0', 'pointer-events-none');
+    }
+
+    function openTheoryModal() {
+      const drawer = document.getElementById('theoryDrawer');
+      const panel = document.getElementById('theoryPanel');
+      drawer.classList.remove('opacity-0', 'pointer-events-none');
+      panel.classList.remove('translate-x-full');
+    }
+
+    function closeTheoryModal() {
+      const drawer = document.getElementById('theoryDrawer');
+      const panel = document.getElementById('theoryPanel');
+      panel.classList.add('translate-x-full');
+      drawer.classList.add('opacity-0', 'pointer-events-none');
+    }
+
+    // Non-blocking toast message replacement for alert()
+    function showToast(text) {
+      const toast = document.getElementById('toastMessage');
+      const toastText = document.getElementById('toastText');
+      toastText.innerText = text;
+      toast.classList.remove('opacity-0', 'pointer-events-none');
+      toast.classList.add('opacity-100');
+
+      setTimeout(() => {
+        toast.classList.remove('opacity-100');
+        toast.classList.add('opacity-0', 'pointer-events-none');
+      }, 3000);
+    }
+
+    function switchTab(tab) {
+      if (tab === 'benchmarks') {
+        const el = document.getElementById('peerGroupSelect');
+        el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        el.focus();
+        showToast('Viewing Social Comparison Benchmarks');
+      }
+    }
+
+    // Event Listeners setup
+    document.addEventListener('DOMContentLoaded', () => {
+      document.getElementById('btnOpenTheory').addEventListener('click', openTheoryModal);
+      document.getElementById('btnBack').addEventListener('click', () => {
+        showToast('Simulating Return to MyToyota Fleet Overview');
+      });
+
+      // Close modals on clicking backdrop
+      document.getElementById('theoryDrawer').addEventListener('click', (e) => {
+        if (e.target.id === 'theoryDrawer') closeTheoryModal();
+      });
+      document.getElementById('tripModal').addEventListener('click', (e) => {
+        if (e.target.id === 'tripModal') closeTripModal();
+      });
+
+      // Run initial simulator calculation
+      calculateProjectedImpact();
+    });
+  </script>
+</body>
+</html>
